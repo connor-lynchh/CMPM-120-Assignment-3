@@ -13,6 +13,7 @@ class Example extends Phaser.Scene
 
     preload ()
     {
+        //alert('preloading');
         this.load.path = './assets/';
         this.load.image('sky', 'sky.png');
         this.load.image('ground', 'platform.png');
@@ -23,14 +24,22 @@ class Example extends Phaser.Scene
 
     create ()
     {
+        gameState.active=true;
+        //alert('creating');
 
-        let jumpButton = this.game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
-        jumpButton.onDown.add(jump, this);
+
+        //let jumpButton = this.game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+        //jumpButton.onDown.add(jump, this);
+
+        gameState.cursors = this.input.keyboard.createCursorKeys();
+
+        //alert('setting cursor object');
 
 
-      //  this.jumpText = this.add.text(400, 100, 'Jumps Used: 0', {fontsize: '12px', fill: '#000'});
+        
 
         this.add.image(400, 300, 'sky');
+        this.jumpText = this.add.text(650, 50, 'Jumps Used: '+gameState.jumps, {fontsize: '12px', fill: '#000'});
 
         this.platforms = this.physics.add.staticGroup();
 
@@ -111,6 +120,7 @@ class Example extends Phaser.Scene
             this.cameras.main.fade(1000, 0,0,0);
             this.time.delayedCall(1000, () => this.scene.start('outro'));
         });
+        //alert('exiting create');
     }
 
 
@@ -137,12 +147,26 @@ class Example extends Phaser.Scene
 
             this.player.anims.play('turn');
         }
-        
+       
 
         /*if (up.isDown && this.player.body.touching.down)
         {
             this.player.setVelocityY(-330);
         }*/
+
+        // This is the code during update() that detects if our little friend jumps and then increments the jump counter
+
+        if (Phaser.Input.Keyboard.JustDown(gameState.cursors.space) && this.player.body.touching.down) {
+            //gameState.player.anims.play('jump', true);
+            this.player.setVelocityY(-330);
+            gameState.jumps +=1;
+            this.jumpText.setText('Jumps Used: ' + gameState.jumps);
+            //alert(gameState.jumps);
+          }
+    
+          if (!this.player.body.touching.down){
+            //gameState.player.anims.play('jump', true);
+          }
 
         if (this.movingPlatform.x >= 500)
         {
@@ -188,13 +212,13 @@ class Outro extends Phaser.Scene {
     preload(){
         this.load.path = './assets/';
         this.load.image('campfire','campfire.gif')
-        
+       
     }
     create() {
         var campfire = this.add.image(910, 640, 'campfire');
         campfire.setScale(500/campfire.height,500/campfire.width);
-        this.add.text(300,50, "Summary").setFontSize(100);
-        this.add.text((300,150, "Number of Jumps made: ").setFontSize(20), jumps);
+        this.add.text(300,50, "Summary",{ fontFamily: 'Arial', size: 100, color: '#1940ff' }).setFontSize(90);
+        this.add.text(310,150, "Number of Jumps made: "+gameState.jumps, { fontFamily: 'Arial', size: 20, color: '#fff' });
         this.input.on('pointerdown', () => {
             this.cameras.main.fade(1000, 0,0,0);
             this.time.delayedCall(1000, () => this.scene.start('example'));
@@ -202,6 +226,12 @@ class Outro extends Phaser.Scene {
     }
 }
 
+const gameState = {
+    speed: 240,
+    ups: 380,
+    jumps: 0
+  };
+  
 const config = {
     type: Phaser.AUTO,
     width: 800,
@@ -211,6 +241,7 @@ const config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 300 },
+            enableBody: true,
             debug: true
         }
     },
