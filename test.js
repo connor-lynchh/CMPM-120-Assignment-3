@@ -168,7 +168,7 @@ class Example extends Phaser.Scene
             //gameState.player.anims.play('jump', true);
           }
 
-        if (this.movingPlatform.x >= 500)
+        /*if (this.movingPlatform.x >= 500)
         {
             this.movingPlatform.setVelocityX(-50);
         }
@@ -184,7 +184,7 @@ class Example extends Phaser.Scene
         else if (this.movingPlatformv2.x <= 300)
         {
             this.movingPlatformv2.setVelocityX(50);
-        }
+        }*/
     }
 
     jump() {
