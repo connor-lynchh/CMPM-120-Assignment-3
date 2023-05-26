@@ -1,8 +1,16 @@
-class Example extends Phaser.Scene
+class Level extends Phaser.Scene
 {
-    constructor() {
-        super('example')
-    }
+    constructor(key) {
+        //alert(key);
+        super(key);
+        this.levelKey = key
+        this.nextLevel = {
+          'Level1': 'Level2',
+          'Level2': 'Level3',
+          'Level3': 'Outro',
+          'Level4': 'Credits',
+        }
+      }
     movingPlatform;
     cursors;
     platforms;
@@ -19,12 +27,20 @@ class Example extends Phaser.Scene
         this.load.image('ground', 'platform.png');
         this.load.image('star', 'star.png');
         this.load.spritesheet('dude', 'dude.png', { frameWidth: 32, frameHeight: 48 });
+        this.load.image('bg3','snowdunes.png')
+        this.load.spritesheet('campfire2','campfire.png',{ frameWidth: 32, frameHeight: 32});       
+        this.load.audio('mars', 'Mars, the Bringer of War.ogg');
+        this.load.image('bg2', 'trees.png');
     }
-
 
     create ()
     {
         gameState.active=true;
+        gameState.min=0;
+        gameState.sec=0;
+        gameState.jumps=0;
+        gameState.stars=0;
+        const offSet= 650;
         //alert('creating');
 
 
@@ -33,17 +49,78 @@ class Example extends Phaser.Scene
 
         gameState.cursors = this.input.keyboard.createCursorKeys();
 
-        //alert('setting cursor object');
-
-
+        const music = this.sound.add('mars');
+        //music.stop();
+        music.play({
+            seek:5
+        });
         
 
-        this.add.image(400, 300, 'sky');
-        this.jumpText = this.add.text(650, 50, 'Jumps Used: '+gameState.jumps, {fontsize: '12px', fill: '#000'});
+        
+        
+        gameState.sky=this.add.image(0, 0, 'sky');
+        gameState.bg2 = this.add.image(0,0,'bg2').setOrigin(0,0);
+        gameState.bg3 = this.add.image(0, 0, 'bg3');
+        
 
+        gameState.sky.setOrigin(0, 0);
+        gameState.bg2.setOrigin(0, 0);
+        gameState.bg3.setOrigin(0, 0);
+
+        this.elasped_time=this.add.text(650,25,'Time: '+gameState.min+':'+gameState.sec, {fontsize: '12px', fill: '#000'});
+        this.jumpText = this.add.text(650, 50, 'Jumps Used: '+gameState.jumps, {fontsize: '12px', fill: '#000'});
+        this.starCollected = this.add.text(650,75,'Captured: '+gameState.stars, {fontsize: '12px', fill: '#000'});
+        
+
+        // Parallax Backgrounds setup
+    
+        const game_width = parseFloat(gameState.bg3.getBounds().width)
+        gameState.width = game_width;
+        const window_width = config.width
+
+        const sky_width = gameState.sky.getBounds().width
+        const bg2_width = gameState.bg2.getBounds().width
+        const bg3_width = gameState.bg3.getBounds().width
+        //alert("bg1: "+bg1_width+" bg2: "+bg2_width+" bg3:"+bg3_width);
+
+
+        //gameState.bgColor.setScrollFactor(0);
+        gameState.sky.setScrollFactor((sky_width - window_width) / (game_width - window_width));
+        //gameState.bg2.setScrollFactor((bg2_width - window_width) / (game_width - window_width));
+
+        // set up timer tween for this level
+        let startingTime = 0;
+        let endTime =59;
+
+        let updateTween = this.tweens.addCounter({
+            from: startingTime,
+            to: endTime,
+            duration: 60100,        // each counter last for 10 secs
+            ease: 'linear',
+            repeat: -1,
+            onRepeat: () =>
+            {
+                this.elasped_time.setText(`Time: ${gameState.min}:00`);
+                gameState.min += 1;
+            },
+            onUpdate: tween =>
+            {
+                const value = Math.round(tween.getValue());
+                this.elasped_time.setText(`Time: ${gameState.min}:${value}`)
+            }
+        });
+
+        // create the lava out of a campfire
+        gameState.lava = this.add.sprite(1100,580,'campfire2');
+        gameState.lava.setScale(1500/gameState.lava.height,100/gameState.lava.width);
+        
         this.platforms = this.physics.add.staticGroup();
 
-        this.platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+        //alert('before weather')
+        //this.setWeather(this.weather);
+        this.levelSetup();
+
+        //this.platforms.create(400, 568, 'ground').setScale(2).refreshBody();
 
         // platforms.create(600, 400, 'ground');
         // platforms.create(50, 250, 'ground');
@@ -62,12 +139,22 @@ class Example extends Phaser.Scene
 
         this.movingPlatformv2.setImmovable(true);
         this.movingPlatformv2.body.allowGravity = false;
+        this.movingPlatformv2.setVelocityX(100);
 
         this.movingPlatformv3.setImmovable(true);
         this.movingPlatformv3.body.allowGravity = false;
         //this.movingPlatformv2.setVelocityX(50);
 
         this.player = this.physics.add.sprite(100, 450, 'dude');
+
+        
+
+
+        this.cameras.main.setBounds(0, 0, gameState.bg3.width, gameState.bg3.height);
+        this.physics.world.setBounds(0, 0, gameState.width, gameState.bg3.height + this.player.height);
+
+        this.cameras.main.startFollow(this.player, true, 0.5, 0.5)
+        //this.cameras.main.x
 
         this.player.setBounce(0.2);
         this.player.setCollideWorldBounds(true);
@@ -96,7 +183,7 @@ class Example extends Phaser.Scene
 
         this.stars = this.physics.add.group({
             key: 'star',
-            repeat: 11,
+            repeat: 15,
             setXY: { x: 12, y: 0, stepX: 70 }
         });
 
@@ -118,10 +205,26 @@ class Example extends Phaser.Scene
 
         this.input.on('pointerdown', () => {
             this.cameras.main.fade(1000, 0,0,0);
-            this.time.delayedCall(1000, () => this.scene.start('outro'));
+            this.time.delayedCall(1000, () => this.scene.start('Outro'));
         });
-        //alert('exiting create');
     }
+        //alert('exiting create');
+    levelSetup() {
+            
+        for (const [xIndex, yIndex] of this.heights.entries()) {
+              this.createPlatform(xIndex, yIndex);
+            } 
+            this.setWeather(this.weather);
+          }
+    
+    createPlatform(xIndex, yIndex) {
+        // Creates a platform evenly spaced along the two indices.
+        // If either is not a number it won't make a platform
+        //alert('in platform create. xIndex:'+xIndex+' yIndex: '+yIndex)
+          if (typeof yIndex === 'number' && typeof xIndex === 'number') {
+            this.platforms.create((220 * xIndex),  yIndex * 70, 'ground').setOrigin(0, 0.5).refreshBody();
+          }
+      }
 
 
 
@@ -161,14 +264,13 @@ class Example extends Phaser.Scene
             this.player.setVelocityY(-330);
             gameState.jumps +=1;
             this.jumpText.setText('Jumps Used: ' + gameState.jumps);
-            //alert(gameState.jumps);
           }
     
           if (!this.player.body.touching.down){
             //gameState.player.anims.play('jump', true);
           }
 
-        /*if (this.movingPlatform.x >= 500)
+        if (this.movingPlatform.x >= 500)
         {
             this.movingPlatform.setVelocityX(-50);
         }
@@ -177,14 +279,33 @@ class Example extends Phaser.Scene
             this.movingPlatform.setVelocityX(50);
         }
 
-        if (this.movingPlatformv2.x >= 500)
+        if (this.movingPlatformv2.x >= 1500)
         {
-            this.movingPlatformv2.setVelocityX(-50);
+            this.movingPlatformv2.setVelocityX(-100);
         }
-        else if (this.movingPlatformv2.x <= 300)
+        else if (this.movingPlatformv2.x <= 50)
         {
-            this.movingPlatformv2.setVelocityX(50);
-        }*/
+            this.movingPlatformv2.setVelocityX(100);
+        }
+        
+        if (this.player.body.x>650){
+            this.elasped_time.x=this.player.body.x;
+            this.jumpText.x=this.player.body.x;
+            this.starCollected.x=this.player.body.x;
+        }
+        //this.elasped_time.x=this.player.body.x;
+
+        // Check to see if player has fallen into the lava.
+        // if so, restart level
+        if (this.player.y > gameState.bg3.height) {
+            this.cameras.main.shake(240, .01, false, function(camera, progress) {
+              if (progress > .9) {
+                //this.scene.restart(this.example);
+                this.scene.stop(this.levelKey);
+                this.scene.start(this.nextLevel[this.levelKey]);
+              }
+            });
+          }
     }
 
     jump() {
@@ -200,36 +321,136 @@ class Example extends Phaser.Scene
     collectStar (player, star)
     {
         star.disableBody(true, true);
+        this.starCollected.setText('Captured: '+gameState.stars)
+        gameState.stars +=1;
     }
 
 
+
+
+setWeather(weather) {
+    const weathers = {
+
+      'morning': {
+        'color': 0xecdccc,
+        'snow':  1,
+        'wind':  20,
+        'bgColor': 0xF8c3aC,
+      },
+
+      'afternoon': {
+        'color': 0xffffff,
+        'snow':  1,
+        'wind': 80,
+        'bgColor': 0x0571FF,
+      },
+
+      'twilight': {
+        'color': 0xccaacc,
+        'bgColor': 0x18235C,
+        'snow':  10,
+        'wind': 200,
+      },
+
+      'night': {
+        'color': 0x555555,
+        'bgColor': 0x000000,
+        'snow':  0,
+        'wind': 0,
+      },
+    }
+    let { color, bgColor, snow, wind } = weathers[weather];
+    gameState.sky.setTint(color);
+    //gameState.bg2.setTint(color);
+    gameState.bg3.setTint(color);
+    //gameState.bgColor.fillColor = bgColor;
+    //gameState.emitter.setQuantity(snow);
+    //gameState.emitter.setSpeedX(-wind);
+    //gameState.player.setTint(color);
+    
+    for (let platform of this.platforms.getChildren()) {
+      platform.setTint(color);
+    }
+    /*
+    if (weather === 'night') {
+      gameState.stars.forEach(star => star.setVisible(true));
+    } else {
+      gameState.stars.forEach(star => star.setVisible(false));
+    }
+    */
+
+    return
+  }
 }
+
+
+
+class Level1 extends Level {
+    constructor() {
+      super('Level1')
+      this.heights = [8, 7, 5, null, 5, 3, null, 3, 3];
+      this.weather = 'afternoon';
+    }
+  }
+  
+  class Level2 extends Level {
+    constructor() {
+        //alert('level 2 cl')
+      super('Level2')
+      this.heights = [8, 4, null, 4, 6, 4, 6, 5, 5];
+      this.weather = 'twilight';
+    }
+  }
+
+  class Level3 extends Level {
+    constructor() {
+        //alert('L3 cl')
+      super('Level3')
+      this.heights = [8, null, 6, 4, 6, 4, 5, null, 4];
+      this.weather = 'morning';
+    }
+  }
 
 class Outro extends Phaser.Scene {
     constructor() {
-        super('outro')
+       // alert('in Outro class')
+        super('Outro')
     }
     preload(){
         this.load.path = './assets/';
         this.load.image('campfire','campfire.gif')
-       
+        //this.load.image('campfire2','campfire.png')
+        this.load.spritesheet('campfire2','campfire.png',{ frameWidth: 32, frameHeight: 32});       
     }
     create() {
-        var campfire = this.add.image(910, 640, 'campfire');
-        campfire.setScale(500/campfire.height,500/campfire.width);
+        gameState.campfire = this.add.sprite(500, 500, 'campfire2');
+        gameState.campfire.setScale(300/gameState.campfire.height,150/gameState.campfire.width);
         this.add.text(300,50, "Summary",{ fontFamily: 'Arial', size: 100, color: '#1940ff' }).setFontSize(90);
         this.add.text(310,150, "Number of Jumps made: "+gameState.jumps, { fontFamily: 'Arial', size: 20, color: '#fff' });
+        
+        this.anims.create({
+            key: 'fire',
+            frames: this.anims.generateFrameNumbers('campfire2'),
+            frameRate: 5,
+            repeat: -1
+        });
+
         this.input.on('pointerdown', () => {
             this.cameras.main.fade(1000, 0,0,0);
-            this.time.delayedCall(1000, () => this.scene.start('example'));
+            this.time.delayedCall(1000, () => this.scene.start('Level1'));
         });
+    }
+    update(){
+        gameState.campfire.anims.play('fire', true);
+
     }
 }
 
 const gameState = {
     speed: 240,
     ups: 380,
-    jumps: 0
+    jumps: 0,
+    stars: 0
   };
   
 const config = {
@@ -242,10 +463,10 @@ const config = {
         arcade: {
             gravity: { y: 300 },
             enableBody: true,
-            debug: true
+            //debug: true
         }
     },
-    scene: [Example,Outro]
+    scene: [Level1, Level2, Level3, Outro]
 };
 
 const game = new Phaser.Game(config);
