@@ -1,13 +1,14 @@
 class Level extends Phaser.Scene
 {
     constructor(key) {
-        //alert(key);
         super(key);
+        //alert(key);
+
         this.levelKey = key
         this.nextLevel = {
           'Level1': 'Level2',
           'Level2': 'Level3',
-          'Level3': 'Outro',
+          'Level3': 'Level1',
           'Level4': 'Credits',
         }
       }
@@ -29,7 +30,7 @@ class Level extends Phaser.Scene
         this.load.spritesheet('dude', 'dude.png', { frameWidth: 32, frameHeight: 48 });
         this.load.image('bg3','snowdunes.png')
         this.load.spritesheet('campfire2','campfire.png',{ frameWidth: 32, frameHeight: 32});       
-        this.load.audio('mars', 'Mars, the Bringer of War.ogg');
+        this.load.audio('mars', 'Mars, the Bringer of War.ogg')
         this.load.image('bg2', 'trees.png');
     }
 
@@ -40,6 +41,8 @@ class Level extends Phaser.Scene
         gameState.sec=0;
         gameState.jumps=0;
         gameState.stars=0;
+        gameState.nextLevel=this.nextLevel[this.levelKey];
+        gameState.levelKey=this.levelKey;
         const offSet= 650;
         //alert('creating');
 
@@ -50,7 +53,7 @@ class Level extends Phaser.Scene
         gameState.cursors = this.input.keyboard.createCursorKeys();
 
         const music = this.sound.add('mars');
-        //music.stop();
+        music.stop();
         music.play({
             seek:5
         });
@@ -86,7 +89,7 @@ class Level extends Phaser.Scene
 
         //gameState.bgColor.setScrollFactor(0);
         gameState.sky.setScrollFactor((sky_width - window_width) / (game_width - window_width));
-        //gameState.bg2.setScrollFactor((bg2_width - window_width) / (game_width - window_width));
+        gameState.bg2.setScrollFactor((bg2_width - window_width) / (game_width - window_width));
 
         // set up timer tween for this level
         let startingTime = 0;
@@ -106,6 +109,7 @@ class Level extends Phaser.Scene
             onUpdate: tween =>
             {
                 const value = Math.round(tween.getValue());
+                gameState.sec=value;
                 this.elasped_time.setText(`Time: ${gameState.min}:${value}`)
             }
         });
@@ -181,6 +185,7 @@ class Level extends Phaser.Scene
 
         this.cursors = this.input.keyboard.createCursorKeys();
 
+        this.physics.add.image().setAngle()
         this.stars = this.physics.add.group({
             key: 'star',
             repeat: 15,
@@ -288,7 +293,7 @@ class Level extends Phaser.Scene
             this.movingPlatformv2.setVelocityX(100);
         }
         
-        if (this.player.body.x>650){
+        if (this.player.body.x>400){
             this.elasped_time.x=this.player.body.x;
             this.jumpText.x=this.player.body.x;
             this.starCollected.x=this.player.body.x;
@@ -302,7 +307,8 @@ class Level extends Phaser.Scene
               if (progress > .9) {
                 //this.scene.restart(this.example);
                 this.scene.stop(this.levelKey);
-                this.scene.start(this.nextLevel[this.levelKey]);
+                //this.scene.start(this.nextLevel[this.levelKey]);
+                this.scene.start('Outro');
               }
             });
           }
@@ -388,15 +394,16 @@ setWeather(weather) {
 class Level1 extends Level {
     constructor() {
       super('Level1')
-      this.heights = [8, 7, 5, null, 5, 3, null, 3, 3];
+      this.heights = [8.2, 7, 5, null, 5, 3, null, 3, 3];
       this.weather = 'afternoon';
     }
   }
   
   class Level2 extends Level {
     constructor() {
-        //alert('level 2 cl')
+        
       super('Level2')
+      //alert('level 2 class, levelKey: '+this.levelKey+' nlk: '+this.nextLevel[this.levelKey])
       this.heights = [8, 4, null, 4, 6, 4, 6, 5, 5];
       this.weather = 'twilight';
     }
@@ -417,6 +424,7 @@ class Outro extends Phaser.Scene {
         super('Outro')
     }
     preload(){
+        
         this.load.path = './assets/';
         this.load.image('campfire','campfire.gif')
         //this.load.image('campfire2','campfire.png')
@@ -425,9 +433,26 @@ class Outro extends Phaser.Scene {
     create() {
         gameState.campfire = this.add.sprite(500, 500, 'campfire2');
         gameState.campfire.setScale(300/gameState.campfire.height,150/gameState.campfire.width);
-        this.add.text(300,50, "Summary",{ fontFamily: 'Arial', size: 100, color: '#1940ff' }).setFontSize(90);
-        this.add.text(310,150, "Number of Jumps made: "+gameState.jumps, { fontFamily: 'Arial', size: 20, color: '#fff' });
-        
+        this.add.text(100,50, gameState.levelKey+" Summary",{ fontFamily: 'Arial', size: 100, color: '#1940ff' }).setFontSize(90);
+
+        this.add.text(310,175, 'Total time spent: '+gameState.min+':'+gameState.sec,{ fontFamily: 'Arial', size: 19, color: '#fff' });
+        this.add.text(310,200, "Number of Jumps made: "+gameState.jumps, { fontFamily: 'Arial', size: 20, color: '#fff' });
+
+        this.add.text(310,225, "Number of Stars Collector: "+gameState.stars, { fontFamily: 'Arial', size: 20, color: '#fff' });
+
+        if(gameState.nextLevel == 'Level2')
+        {
+            this.add.text(300,375,"The next level will require some higher jumping", { fontFamily: 'Arial', size: 20, color: '#fff' });
+
+        }
+        else if(gameState.nextLevel == 'Level3')
+        {
+            this.add.text(300,375,"Be mindful of the gaps on this next level",{ fontFamily: 'Arial', size: 20, color: '#fff' });
+        }
+        else if(gameState.nextLevel == 'Level1')
+        {
+            this.add.text(300,375,"nice job on making it to the end!", { fontFamily: 'Arial', size: 20, color: '#fff' });
+        }
         this.anims.create({
             key: 'fire',
             frames: this.anims.generateFrameNumbers('campfire2'),
@@ -437,7 +462,7 @@ class Outro extends Phaser.Scene {
 
         this.input.on('pointerdown', () => {
             this.cameras.main.fade(1000, 0,0,0);
-            this.time.delayedCall(1000, () => this.scene.start('Level1'));
+            this.time.delayedCall(1000, () => this.scene.start(gameState.nextLevel));
         });
     }
     update(){
@@ -450,7 +475,8 @@ const gameState = {
     speed: 240,
     ups: 380,
     jumps: 0,
-    stars: 0
+    stars: 0,
+    nextLevel: 'Level4'
   };
   
 const config = {
