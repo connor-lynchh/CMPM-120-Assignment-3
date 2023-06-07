@@ -1,6 +1,6 @@
 # CMPM-120-Assignment-3
 
-1.) 
+1.) Link to game: https://connor-lynchh.github.io/CMPM-120-Assignment-3/
 
 2a.)A continuous input the player makes during the game is moving the avatar around the map using the arrow keys. A discrete input is how when the character presses the space bar they jump and fall to the ground while still being able to maneuver left and right.
 
